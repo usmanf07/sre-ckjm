@@ -31,7 +31,7 @@ import java.io.*;
  * @version $Revision: 1.9 $
  * @author <a href="http://www.spinellis.gr">Diomidis Spinellis</a>
  */
-class ClassMetricsContainer {
+public class ClassMetricsContainer {
 
     /** The map from class names to the corresponding metrics */
     private HashMap<String, ClassMetrics> m = new HashMap<String, ClassMetrics>();

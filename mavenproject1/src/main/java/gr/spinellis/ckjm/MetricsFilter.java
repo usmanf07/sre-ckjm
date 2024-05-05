@@ -74,7 +74,7 @@ public class MetricsFilter {
 	    }
 	}
 	if (jc != null) {
-	    ClassVisitor visitor = new ClassVisitor(jc, cm);
+	    ClassVisitor visitor = ClassVisitor.createInstance(jc, cm);
 	    visitor.start();
 	    visitor.end();
 	}
