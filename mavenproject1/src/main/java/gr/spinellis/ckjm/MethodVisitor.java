@@ -29,7 +29,7 @@ import java.util.*;
  * @version $Revision: 1.8 $
  * @author <a href="http://www.spinellis.gr">Diomidis Spinellis</a>
  */
-class MethodVisitor extends EmptyVisitor {
+public class MethodVisitor extends EmptyVisitor {
     /** Method generation template. */
     private MethodGen mg;
     /* The class's constant pool. */
@@ -40,11 +40,11 @@ class MethodVisitor extends EmptyVisitor {
     private ClassMetrics cm;
 
     /** Constructor. */
-    MethodVisitor(MethodGen m, ClassVisitor c) {
+    public MethodVisitor(MethodGen m, ClassVisitor c) {
 	mg  = m;
 	cv = c;
 	cp  = mg.getConstantPool();
-	cm = cv.getMetrics();
+	cm = cv.getClassMetrics();
     }
 
     /** Start the method's visit. */
@@ -73,43 +73,43 @@ class MethodVisitor extends EmptyVisitor {
     /** Local variable use. */
     public void visitLocalVariableInstruction(LocalVariableInstruction i) {
 	if(i.getOpcode() != Constants.IINC)
-	    cv.registercall(i.getType(cp));
+	    cv.getRegister().registerCoupling(i.getType(cp));
     }
 
     /** Array use. */
     public void visitArrayInstruction(ArrayInstruction i) {
-	cv.registercall(i.getType(cp));
+	cv.getRegister().registerCoupling(i.getType(cp));
     }
 
     /** Field access. */
     public void visitFieldInstruction(FieldInstruction i) {
-	cv.registerFieldAccessCaller(i.getClassName(cp), i.getFieldName(cp));
-	cv.registercall(i.getFieldType(cp));
+	cv.getRegister().registerFieldAccess(i.getClassName(cp), i.getFieldName(cp));
+	cv.getRegister().registerCoupling(i.getFieldType(cp));
     }
 
     /** Method invocation. */
     public void visitInvokeInstruction(InvokeInstruction i) {
 	Type[] argTypes   = i.getArgumentTypes(cp);
 	for (int j = 0; j < argTypes.length; j++)
-	    cv.registercall(argTypes[j]);
-	cv.registercall(i.getReturnType(cp));
+	    cv.getRegister().registerCoupling(argTypes[j]);
+	cv.getRegister().registerCoupling(i.getReturnType(cp));
 	/* Measuring decision: measure overloaded methods separately */
-	cv.registerMethodInvocation(i.getClassName(cp), i.getMethodName(cp), argTypes);
+	cv.getRegister().registerMethodInvocation(i.getClassName(cp), i.getMethodName(cp), argTypes);
     }
 
     /** Visit an instanceof instruction. */
     public void visitINSTANCEOF(INSTANCEOF i) {
-	cv.registercall(i.getType(cp));
+	cv.getRegister().registerCoupling(i.getType(cp));
     }
 
     /** Visit checklast instruction. */
     public void visitCHECKCAST(CHECKCAST i) {
-	cv.registercall(i.getType(cp));
+	cv.getRegister().registerCoupling(i.getType(cp));
     }
 
     /** Visit return instruction. */
     public void visitReturnInstruction(ReturnInstruction i) {
-	cv.registercall(i.getType(cp));
+	cv.getRegister().registerCoupling(i.getType(cp));
     }
 
     /** Visit the method's exception handlers. */
@@ -120,7 +120,7 @@ class MethodVisitor extends EmptyVisitor {
 	for(int i=0; i < handlers.length; i++) {
 	    Type t = handlers[i].getCatchType();
 	    if (t != null)
-		cv.registercall(t);
+		cv.getRegister().registerCoupling(t);
 	}
     }
 }
