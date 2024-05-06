@@ -31,7 +31,7 @@ public class PrintXmlResults implements CkjmOutputHandler {
         this.p = p;
     }
 
-    public void printHeader() {
+    public void startOutput() {
         p.println("<?xml version=\"1.0\"?>");
         p.println("<ckjm>");
     }
@@ -50,7 +50,7 @@ public class PrintXmlResults implements CkjmOutputHandler {
                 "</class>\n");
     }
 
-    public void printFooter () {
+     public void endOutput() {
         p.println("</ckjm>");
     }
 }

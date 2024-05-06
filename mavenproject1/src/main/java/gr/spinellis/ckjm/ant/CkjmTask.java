@@ -16,6 +16,8 @@
 
 package gr.spinellis.ckjm.ant;
 
+import ExtractedClasses.OutputHandlerFactory;
+import gr.spinellis.ckjm.CkjmOutputHandler;
 import gr.spinellis.ckjm.MetricsFilter;
 import gr.spinellis.ckjm.PrintPlainResults;
 
@@ -29,6 +31,8 @@ import org.apache.tools.ant.BuildException;
 import org.apache.tools.ant.DirectoryScanner;
 import org.apache.tools.ant.taskdefs.MatchingTask;
 import org.apache.tools.ant.types.Path;
+
+
 
 /**
  * Ant task definition for the CKJM metrics tool.
@@ -44,9 +48,12 @@ public class CkjmTask extends MatchingTask {
     private Path extdirs;
 
     private String format;
-
-    public CkjmTask() {
-        this.format = "plain";
+    
+    private OutputHandlerFactory factory;
+    
+    public CkjmTask(OutputHandlerFactory factory) {
+        this.factory = factory;
+        this.format = "plain"; // Default format
     }
 
     /**
@@ -87,10 +94,9 @@ public class CkjmTask extends MatchingTask {
      */
     public void setExtdirs(Path e) {
         if (extdirs == null) {
-            extdirs = e;
-        } else {
-            extdirs.append(e);
+            extdirs = new Path(getProject());
         }
+        extdirs.append(e);
     }
 
     /**
@@ -111,16 +117,20 @@ public class CkjmTask extends MatchingTask {
         }
         return extdirs.createPath();
     }
+    
+    private void handleOutput(String[] files) throws IOException {
+        try (OutputStream outputStream = new FileOutputStream(outputFile)) {
+            CkjmOutputHandler outputHandler = factory.createOutputHandler(format, outputStream);
 
-    /**
-     * Executes the CKJM Ant Task. This method redirects the output of the CKJM
-     * tool to a file. When XML format is used it will buffer the output and
-     * translate it to the XML format.
-     *
-     * @throws BuildException
-     *             if an error occurs.
-     */
-    public void execute() throws BuildException {
+            outputHandler.startOutput();
+            MetricsFilter.runMetrics(files, outputHandler);
+            outputHandler.endOutput();
+        } catch (IOException ioe) {
+            throw new BuildException("Error file handling: " + ioe.getMessage());
+        }
+    }
+    
+    private void validateClassDirectory() throws BuildException {
         if (classDir == null) {
             throw new BuildException("classdir attribute must be set!");
         }
@@ -130,15 +140,34 @@ public class CkjmTask extends MatchingTask {
         if (!classDir.isDirectory()) {
             throw new BuildException("classdir is not a directory!");
         }
+    }
 
-	if (extdirs != null && extdirs.size() > 0) {
-	    if (System.getProperty("java.ext.dirs").length() == 0)
-		System.setProperty("java.ext.dirs", extdirs.toString());
-	    else
-		System.setProperty("java.ext.dirs",
-		    System.getProperty("java.ext.dirs") + File.pathSeparator +
-		    extdirs);
-	}
+    private void configureExtensionDirectories() {
+        if (extdirs != null && extdirs.size() > 0) {
+            String existingDirs = System.getProperty("java.ext.dirs", "");
+            if (existingDirs.isEmpty()) {
+                System.setProperty("java.ext.dirs", extdirs.toString());
+            } else {
+                System.setProperty("java.ext.dirs", existingDirs + File.pathSeparator + extdirs);
+            }
+        }
+    }
+
+    /**
+     * Executes the CKJM Ant Task. This method redirects the output of the CKJM
+     * tool to a file. When XML format is used it will buffer the output and
+     * translate it to the XML format.
+     *
+     * @throws BuildException
+     *             if an error occurs.
+     */
+    
+    public void execute() throws BuildException {
+        // Validate class directory
+        validateClassDirectory();
+
+        // Configure extension directories
+        configureExtensionDirectories();
 
         DirectoryScanner ds = super.getDirectoryScanner(classDir);
 
@@ -150,27 +179,10 @@ public class CkjmTask extends MatchingTask {
                 files[i] = classDir.getPath() + File.separatorChar + files[i];
             }
 
-            try {
-                OutputStream outputStream = new FileOutputStream(outputFile);
-
-                if (format.equals("xml")) {
-                    PrintXmlResults outputXml = new PrintXmlResults(
-                            new PrintStream(outputStream));
-
-                    outputXml.printHeader();
-                    MetricsFilter.runMetrics(files, outputXml);
-                    outputXml.printFooter();
-                } else {
-                    PrintPlainResults outputPlain = new PrintPlainResults(
-                            new PrintStream(outputStream));
-                    MetricsFilter.runMetrics(files, outputPlain);
-                }
-
-                outputStream.close();
-
-            } catch (IOException ioe) {
-                throw new BuildException("Error file handling: "
-                        + ioe.getMessage());
+           try {
+                handleOutput(files);
+            } catch (IOException e) {
+                throw new BuildException("Error during output handling: " + e.getMessage());
             }
         }
     }
