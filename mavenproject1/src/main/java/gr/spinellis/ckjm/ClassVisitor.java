@@ -1,3 +1,5 @@
+
+
 package gr.spinellis.ckjm;
 
 import Processor.JavaClassProcessor;
@@ -132,3 +134,4 @@ public class ClassVisitor extends org.apache.bcel.classfile.EmptyVisitor {
     }
 
 }
+
