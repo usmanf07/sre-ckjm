@@ -1,17 +1,3 @@
-/*
- * $Id: \\dds\\src\\Research\\ckjm.RCS\\src\\gr\\spinellis\\ckjm\\ant\\PrintXmlResults.java,v 1.4 2005/11/05 08:33:18 dds Exp $
- *
- * (C) Copyright 2005 Diomidis Spinellis, Julien Rentrop
- *
- * Permission to use, copy, and distribute this software and its documentation
- * for any purpose and without fee is hereby granted, provided that the above
- * copyright notice appear in all copies and that both that copyright notice and
- * this permission notice appear in supporting documentation.
- *
- * THIS SOFTWARE IS PROVIDED ``AS IS'' AND WITHOUT ANY EXPRESS OR IMPLIED
- * WARRANTIES, INCLUDING, WITHOUT LIMITATION, THE IMPLIED WARRANTIES OF
- * MERCHANTIBILITY AND FITNESS FOR A PARTICULAR PURPOSE.
- */
 package gr.spinellis.ckjm.ant;
 
 import gr.spinellis.ckjm.CkjmOutputHandler;
@@ -25,32 +11,35 @@ import java.io.PrintStream;
  * @author Julien Rentrop
  */
 public class PrintXmlResults implements CkjmOutputHandler {
-    private PrintStream p;
+    private final PrintStream printStream;
 
-    public PrintXmlResults(PrintStream p) {
-        this.p = p;
+    public PrintXmlResults(PrintStream printStream) {
+        this.printStream = printStream;
     }
 
+    @Override
     public void startOutput() {
-        p.println("<?xml version=\"1.0\"?>");
-        p.println("<ckjm>");
+        printStream.println("<?xml version=\"1.0\"?>");
+        printStream.println("<ckjm>");
     }
 
-    public void handleClass(String name, ClassMetrics c) {
-        p.print("<class>\n" +
-                "<name>" + name + "</name>\n" +
-                "<wmc>" + c.getWmc() + "</wmc>\n" +
-                "<dit>" + c.getDit() + "</dit>\n" +
-                "<noc>" + c.getNoc() + "</noc>\n" +
-                "<cbo>" + c.getCbo() + "</cbo>\n" +
-                "<rfc>" + c.getRfc() + "</rfc>\n" +
-                "<lcom>" + c.getLcom() + "</lcom>\n" +
-                "<ca>" + c.getCa() + "</ca>\n" +
-                "<npm>" + c.getNpm() + "</npm>\n" +
-                "</class>\n");
+    @Override
+    public void handleClass(String name, ClassMetrics metrics) {
+        printStream.printf("<class>%n");
+        printStream.printf("    <name>%s</name>%n", name);
+        printStream.printf("    <wmc>%d</wmc>%n", metrics.getWmc());
+        printStream.printf("    <dit>%d</dit>%n", metrics.getDit());
+        printStream.printf("    <noc>%d</noc>%n", metrics.getNoc());
+        printStream.printf("    <cbo>%d</cbo>%n", metrics.getCbo());
+        printStream.printf("    <rfc>%d</rfc>%n", metrics.getRfc());
+        printStream.printf("    <lcom>%d</lcom>%n", metrics.getLcom());
+        printStream.printf("    <ca>%d</ca>%n", metrics.getCa());
+        printStream.printf("    <npm>%d</npm>%n", metrics.getNpm());
+        printStream.printf("</class>%n");
     }
 
-     public void endOutput() {
-        p.println("</ckjm>");
+    @Override
+    public void endOutput() {
+        printStream.println("</ckjm>");
     }
 }
