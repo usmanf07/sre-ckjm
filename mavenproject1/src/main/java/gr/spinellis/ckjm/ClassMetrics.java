@@ -116,16 +116,17 @@ public class ClassMetrics {
 
     /** Return the 6 CK metrics plus Ce as a space-separated string */
     public String toString() {
-	return (
-		wmc +
-		" " + getDit() +
-		" " + noc +
-		" " + cbo +
-		" " + rfc +
-		" " + lcom +
-		" " + getCa()+
-		" " + npm);
-    }
+    return (
+        getWmc() +
+        " " + getDit() +
+        " " + getNoc() +
+        " " + getCbo() +
+        " " + getRfc() +
+        " " + getLcom() +
+        " " + getCa() +
+        " " + getNpm());
+}
+
 
     /** Mark the instance as visited by the metrics analyzer */
     public void setVisited() { visited = true; }
