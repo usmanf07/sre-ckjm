@@ -13,114 +13,135 @@
  * WARRANTIES, INCLUDING, WITHOUT LIMITATION, THE IMPLIED WARRANTIES OF
  * MERCHANTIBILITY AND FITNESS FOR A PARTICULAR PURPOSE.
  */
-
 package gr.spinellis.ckjm;
 
+import ExtractedClasses.ExceptionHandlerUpdater;
 import org.apache.bcel.generic.*;
 import org.apache.bcel.Constants;
 import org.apache.bcel.util.*;
 import java.util.*;
 
 /**
- * Visit a method calculating the class's Chidamber-Kemerer metrics.
- * A helper class for ClassVisitor.
+ * Visit a method calculating the class's Chidamber-Kemerer metrics. A helper
+ * class for ClassVisitor.
  *
  * @see ClassVisitor
  * @version $Revision: 1.8 $
  * @author <a href="http://www.spinellis.gr">Diomidis Spinellis</a>
  */
 public class MethodVisitor extends EmptyVisitor {
-    /** Method generation template. */
+
+    /**
+     * Method generation template.
+     */
     private MethodGen mg;
     /* The class's constant pool. */
     private ConstantPoolGen cp;
-    /** The visitor of the class the method visitor is in. */
+    /**
+     * The visitor of the class the method visitor is in.
+     */
     private ClassVisitor cv;
-    /** The metrics of the class the method visitor is in. */
+    /**
+     * The metrics of the class the method visitor is in.
+     */
     private ClassMetrics cm;
 
-    /** Constructor. */
-    public MethodVisitor(MethodGen m, ClassVisitor c) {
-	mg  = m;
-	cv = c;
-	cp  = mg.getConstantPool();
-	cm = cv.getClassMetrics();
+    private final ExceptionHandlerUpdater exceptionHandlerUpdater;
+
+    /**
+     * Constructor.
+     */
+    private MethodVisitor(MethodGen m, ClassVisitor c) {
+        mg = m;
+        cv = c;
+        cp = mg.getConstantPool();
+        cm = cv.getClassMetrics();
+        exceptionHandlerUpdater = new ExceptionHandlerUpdater(m, c);
     }
 
-    /** Start the method's visit. */
+    // Static factory method for instantiation
+    public static MethodVisitor create(MethodGen m, ClassVisitor c) {
+        return new MethodVisitor(m, c);
+    }
+
+    /**
+     * Start the method's visit.
+     */
     public void start() {
-	if (!mg.isAbstract() && !mg.isNative()) {
-	    for (InstructionHandle ih = mg.getInstructionList().getStart();
-		 ih != null; ih = ih.getNext()) {
-		Instruction i = ih.getInstruction();
+        if (!mg.isAbstract() && !mg.isNative()) {
+            for (InstructionHandle ih = mg.getInstructionList().getStart();
+                    ih != null; ih = ih.getNext()) {
+                Instruction i = ih.getInstruction();
 
-		if(!visitInstruction(i))
-		    i.accept(this);
-	    }
-	    updateExceptionHandlers();
-	}
+                if (!visitInstruction(i)) {
+                    i.accept(this);
+                }
+            }
+            exceptionHandlerUpdater.updateExceptionHandlers();
+        }
     }
 
-    /** Visit a single instruction. */
-    private boolean visitInstruction(Instruction i) {
-	short opcode = i.getOpcode();
+    /**
+     * Visit a single instruction.
+     */
+    public boolean visitInstruction(Instruction i) {
+        short opcode = i.getOpcode();
 
-	return ((InstructionConstants.INSTRUCTIONS[opcode] != null) &&
-	   !(i instanceof ConstantPushInstruction) &&
-	   !(i instanceof ReturnInstruction));
+        return ((InstructionConstants.INSTRUCTIONS[opcode] != null)
+                && !(i instanceof ConstantPushInstruction)
+                && !(i instanceof ReturnInstruction));
     }
 
-    /** Local variable use. */
+    /**
+     * Local variable use.
+     */
     public void visitLocalVariableInstruction(LocalVariableInstruction i) {
-	if(i.getOpcode() != Constants.IINC)
-	    cv.getRegister().registerCoupling(i.getType(cp));
+        if (i.getOpcode() != Constants.IINC) {
+            cv.getRegister().registerCoupling(i.getType(cp));
+        }
     }
 
-    /** Array use. */
+    /**
+     * Array use.
+     */
     public void visitArrayInstruction(ArrayInstruction i) {
-	cv.getRegister().registerCoupling(i.getType(cp));
+        cv.getRegister().registerCoupling(i.getType(cp));
     }
 
-    /** Field access. */
+    /**
+     * Field access.
+     */
     public void visitFieldInstruction(FieldInstruction i) {
-	cv.getRegister().registerFieldAccess(i.getClassName(cp), i.getFieldName(cp));
-	cv.getRegister().registerCoupling(i.getFieldType(cp));
+        cv.getRegister().registerFieldAccess(i.getClassName(cp), i.getFieldName(cp));
+        cv.getRegister().registerCoupling(i.getFieldType(cp));
     }
 
-    /** Method invocation. */
     public void visitInvokeInstruction(InvokeInstruction i) {
-	Type[] argTypes   = i.getArgumentTypes(cp);
-	for (int j = 0; j < argTypes.length; j++)
-	    cv.getRegister().registerCoupling(argTypes[j]);
-	cv.getRegister().registerCoupling(i.getReturnType(cp));
-	/* Measuring decision: measure overloaded methods separately */
-	cv.getRegister().registerMethodInvocation(i.getClassName(cp), i.getMethodName(cp), argTypes);
+        Type[] argTypes = i.getArgumentTypes(cp);
+        registerArgumentTypes(argTypes);
+        Type returnType = i.getReturnType(cp);
+        cv.getRegister().registerCoupling(returnType);
+        /* Measuring decision: measure overloaded methods separately */
+        cv.getRegister().registerMethodInvocation(i.getClassName(cp), i.getMethodName(cp), argTypes);
     }
-
-    /** Visit an instanceof instruction. */
+    private void registerArgumentTypes(Type[] argTypes) {
+    for (Type argType : argTypes) {
+        cv.getRegister().registerCoupling(argType);
+    }
+}
     public void visitINSTANCEOF(INSTANCEOF i) {
-	cv.getRegister().registerCoupling(i.getType(cp));
+        cv.getRegister().registerCoupling(i.getType(cp));
     }
 
-    /** Visit checklast instruction. */
     public void visitCHECKCAST(CHECKCAST i) {
-	cv.getRegister().registerCoupling(i.getType(cp));
+        cv.getRegister().registerCoupling(i.getType(cp));
     }
 
-    /** Visit return instruction. */
+    /**
+     * Visit return instruction.
+     */
     public void visitReturnInstruction(ReturnInstruction i) {
-	cv.getRegister().registerCoupling(i.getType(cp));
+        cv.getRegister().registerCoupling(i.getType(cp));
     }
 
-    /** Visit the method's exception handlers. */
-    private void updateExceptionHandlers() {
-	CodeExceptionGen[] handlers = mg.getExceptionHandlers();
-
-	/* Measuring decision: couple exceptions */
-	for(int i=0; i < handlers.length; i++) {
-	    Type t = handlers[i].getCatchType();
-	    if (t != null)
-		cv.getRegister().registerCoupling(t);
-	}
-    }
 }

@@ -64,7 +64,7 @@ public class JavaMethodProcessor {
     }
 
     private void createMethodVisitorAndStart(MethodGen mg) {
-        MethodVisitor factory = new MethodVisitor(mg, cv);
+        MethodVisitor factory =  MethodVisitor.create(mg, cv);
         factory.start();
     }
 
